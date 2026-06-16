@@ -1,6 +1,5 @@
 <?php
 require_once '../config.php';
-session_start();
 require_login();
 
 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);

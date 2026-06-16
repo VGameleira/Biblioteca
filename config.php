@@ -1,10 +1,22 @@
 <?php
-// Configurações do Sistema
-define('DB_HOST', 'sql111.infinityfree.com');
-define('DB_NAME', 'if0_41345258_biblioteca');
-define('DB_USER', 'if0_41345258');
-define('DB_PASS', '0V8Sv0WSa5szv'); // ← ALTERE AQUI: Coloque a senha do seu MySQL (geralmente vazia no XAMPP/WAMP)
-define('DB_CHARSET', 'utf8mb4');
+
+// ─── Carregar variáveis de ambiente ─────────────────────────────────────────
+$envFile = __DIR__ . '/.env';
+if (file_exists($envFile)) {
+    $env = parse_ini_file($envFile);
+} else {
+    $env = [];
+}
+
+// ─── Configurações do Sistema ────────────────────────────────────────────────
+define('DB_HOST',    $env['DB_HOST']    ?? 'localhost');
+define('DB_NAME',    $env['DB_NAME']    ?? 'biblioteca');
+define('DB_USER',    $env['DB_USER']    ?? 'root');
+define('DB_PASS',    $env['DB_PASS']    ?? '');
+define('DB_CHARSET', $env['DB_CHARSET'] ?? 'utf8mb4');
+
+define('ENVIRONMENT', $env['ENVIRONMENT'] ?? 'production');
+define('IS_DEV', ENVIRONMENT === 'development');
 
 // Configurações de Upload
 define('UPLOAD_DIR', __DIR__ . '/uploads/');
@@ -12,54 +24,61 @@ define('UPLOAD_MAX_SIZE', 5 * 1024 * 1024); // 5MB
 define('ALLOWED_EXTENSIONS', ['jpg', 'jpeg', 'png', 'gif', 'webp']);
 define('ALLOWED_MIME_TYPES', ['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 
-// Configurações de Sessão
+// ─── Configurações de Sessão ─────────────────────────────────────────────────
 ini_set('session.cookie_httponly', 1);
 ini_set('session.use_only_cookies', 1);
 ini_set('session.cookie_samesite', 'Strict');
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-// Timezone
+// ─── Timezone ────────────────────────────────────────────────────────────────
 date_default_timezone_set('America/Sao_Paulo');
 
-// Habilitar exibição de erros (REMOVER EM PRODUÇÃO)
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+// ─── Error Reporting ─────────────────────────────────────────────────────────
+if (IS_DEV) {
+    error_reporting(E_ALL);
+    ini_set('display_errors', 1);
+} else {
+    error_reporting(E_ALL & ~E_DEPRECATED & ~E_STRICT);
+    ini_set('display_errors', 0);
+    ini_set('log_errors', 1);
+}
 
-// Conexão com o Banco de Dados
+// ─── Conexão com o Banco de Dados ───────────────────────────────────────────
 try {
     $dsn = sprintf('mysql:host=%s;dbname=%s;charset=%s', DB_HOST, DB_NAME, DB_CHARSET);
     $pdo = new PDO($dsn, DB_USER, DB_PASS, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES => false,
+        PDO::ATTR_EMULATE_PREPARES   => false,
         PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci"
     ]);
-    
-    // Mensagem de sucesso (REMOVER EM PRODUÇÃO)
-    // echo "✓ Conexão com banco de dados estabelecida!";
-    
 } catch (PDOException $e) {
     error_log("Erro de conexão: " . $e->getMessage());
-    
-    // Mensagem mais detalhada para debug
-    if (ini_get('display_errors')) {
-        die("
-            <div style='font-family: Arial; padding: 20px; background: #f8d7da; border: 2px solid #dc3545; border-radius: 10px; margin: 20px;'>
-                <h2 style='color: #842029;'>❌ Erro de Conexão com Banco de Dados</h2>
-                <p><strong>Mensagem:</strong> " . $e->getMessage() . "</p>
-                <hr>
-                <h3>Verifique:</h3>
+
+    if (IS_DEV) {
+        die(sprintf(
+            '<div style="font-family:Arial;padding:20px;background:#f8d7da;border:2px solid #dc3545;border-radius:10px;margin:20px;">
+                <h2 style="color:#842029;"> Erro de Conexão com Banco de Dados</h2>
+                <p><strong>Mensagem:</strong> %s</p>
+                <hr><h3>Verifique:</h3>
                 <ul>
                     <li>O MySQL está rodando?</li>
-                    <li>O banco de dados '<strong>biblioteca</strong>' foi criado?</li>
-                    <li>Usuário: <strong>" . DB_USER . "</strong></li>
-                    <li>Senha: <strong>" . (DB_PASS ? '***' : '(vazia)') . "</strong></li>
-                    <li>Host: <strong>" . DB_HOST . "</strong></li>
+                    <li>O banco de dados foi criado?</li>
+                    <li>Host: <strong>%s</strong></li>
+                    <li>Usuário: <strong>%s</strong></li>
+                    <li>Senha: <strong>%s</strong></li>
                 </ul>
-            </div>
-        ");
-    } else {
-        die("Erro ao conectar ao banco de dados. Tente novamente mais tarde.");
+            </div>',
+            $e->getMessage(),
+            DB_HOST,
+            DB_USER,
+            DB_PASS ? '***' : '(vazia)'
+        ));
     }
+
+    die("Erro ao conectar ao banco de dados. Tente novamente mais tarde.");
 }
 
 // Funções Auxiliares

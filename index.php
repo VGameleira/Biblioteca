@@ -1,6 +1,5 @@
 <?php
 require_once 'config.php';
-session_start();
 
 // Redirecionar se já estiver logado
 if (is_logged_in()) {

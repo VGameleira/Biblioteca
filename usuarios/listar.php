@@ -1,6 +1,5 @@
 <?php
 require_once '../config.php';
-session_start();
 require_admin();
 
 $mensagem = "";
@@ -36,6 +35,11 @@ try {
 }
 
 // Mostrar mensagens de sessão
+if (isset($_SESSION['sucesso_edicao'])) {
+    $mensagem = show_message($_SESSION['sucesso_edicao'], "success");
+    unset($_SESSION['sucesso_edicao']);
+}
+
 if (isset($_SESSION['sucesso_exclusao'])) {
     $mensagem = show_message($_SESSION['sucesso_exclusao'], "success");
     unset($_SESSION['sucesso_exclusao']);
